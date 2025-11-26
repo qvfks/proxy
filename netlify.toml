@@ -1,55 +1,23 @@
 [build]
   functions = "netlify/functions"
 
-############################################
-# USERS API
-############################################
+# Global catch-all for Roblox (covers v1/v2)
 [[redirects]]
-  from = "/users/*"
+  from = "/*"
   to = "/.netlify/functions/proxy"
   status = 200
+  force = true
+  conditions = { Path = { includes = "/avatar/", excludes = ".netlify" } }
 
-############################################
-# GAMES API
-############################################
-[[redirects]]
-  from = "/games/*"
-  to = "/.netlify/functions/proxy"
-  status = 200
-
-############################################
-# CATALOG API
-############################################
-[[redirects]]
-  from = "/catalog/*"
-  to = "/.netlify/functions/proxy"
-  status = 200
-
-############################################
-# THUMBNAILS API
-############################################
+# Specific for thumbnails/economy (fallback)
 [[redirects]]
   from = "/thumbnails/*"
   to = "/.netlify/functions/proxy"
   status = 200
+  force = true
 
-############################################
-# ECONOMY API
-############################################
 [[redirects]]
   from = "/economy/*"
   to = "/.netlify/functions/proxy"
   status = 200
-
-############################################
-# AVATAR API  🔥 FIXED 🔥
-# Must match ALL avatar URLs:
-# /avatar/v1/users/<id>/outfits
-# /avatar/v1/outfits/<id>/details
-# /avatar/v1/outfits/<id>/assets
-# /avatar/... ANYTHING
-############################################
-[[redirects]]
-  from = "/avatar/*"
-  to = "/.netlify/functions/proxy"
-  status = 200
+  force = true

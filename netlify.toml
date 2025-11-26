@@ -1,32 +1,42 @@
 [build]
   functions = "netlify/functions"
 
-# USERS
+############################################
+# USERS API
+############################################
 [[redirects]]
   from = "/users/v1/*"
-  to = "/.netlify/functions/proxy?url=https://users.roblox.com/v1/:splat"
+  to = "/.netlify/functions/proxy"
   status = 200
 
-# GAMES
+############################################
+# GAMES API
+############################################
 [[redirects]]
   from = "/games/v1/*"
-  to = "/.netlify/functions/proxy?url=https://games.roblox.com/v1/:splat"
+  to = "/.netlify/functions/proxy"
   status = 200
 
-# CATALOG
+############################################
+# CATALOG API
+############################################
 [[redirects]]
   from = "/catalog/v1/*"
-  to = "/.netlify/functions/proxy?url=https://catalog.roblox.com/v1/:splat"
+  to = "/.netlify/functions/proxy"
   status = 200
 
-# THUMBNAILS
+############################################
+# THUMBNAILS API
+############################################
 [[redirects]]
   from = "/thumbnails/v1/*"
-  to = "/.netlify/functions/proxy?url=https://thumbnails.roblox.com/v1/:splat"
+  to = "/.netlify/functions/proxy"
   status = 200
 
-# ECONOMY
+############################################
+# ECONOMY API
+############################################
 [[redirects]]
   from = "/economy/v1/*"
-  to = "/.netlify/functions/proxy?url=https://economy.roblox.com/v1/:splat"
+  to = "/.netlify/functions/proxy"
   status = 200

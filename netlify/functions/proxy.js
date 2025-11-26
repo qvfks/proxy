@@ -1,12 +1,12 @@
 const fetch = require("node-fetch");
 
-// ===== CONFIG (Tuned for 2025 Roblox blocks) =====
-const CACHE_TTL = 60000; // 60 seconds cache (syncs with your Lua)
-const MAX_RETRIES = 5;   // More attempts
-const RETRY_DELAY = 2000; // 2s base delay
-const BACKOFF_ON_429 = 5000; // 5s backoff for rate limits
+// ===== CONFIG =====
+const CACHE_TTL = 60000; // 60 seconds (matches Lua)
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+const BACKOFF_ON_429 = 5000; // Longer for 2025 blocks
 
-// Allowable Roblox API base URLs (unchanged)
+// Allowable Roblox API base URLs
 const allowedBase = {
     users: "https://users.roblox.com",
     games: "https://games.roblox.com",
@@ -16,73 +16,59 @@ const allowedBase = {
     avatar: "https://avatar.roblox.com"
 };
 
-// In-memory cache: key: full_url → { time, data, status }
+// Simple in-memory cache
 const cache = {};
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// FIXED: Better Roblox URL builder (handles /avatar/v2/* correctly)
+// FIXED: Handle /avatar/v2/* paths (strips v2)
 function buildRobloxURL(path) {
     const segments = path.split("/").filter(Boolean);
-    if (segments.length === 0) return null;
+    const baseKey = segments[0];
 
-    let baseKey = segments[0];
+    // Handle avatar v2: strip 'v2' from segments[1]
     let tail = segments.slice(1).join("/");
-
-    // Special handling for avatar v2: strip 'v2' from tail if present
     if (baseKey === "avatar" && segments[1] === "v2") {
         tail = segments.slice(2).join("/");
     }
 
     const base = allowedBase[baseKey];
-    if (!base) {
-        console.log(`[proxy] Invalid base: ${baseKey}`);
-        return null;
-    }
+    if (!base) return null;
 
-    const fullUrl = `${base}/${tail}`;
-    console.log(`[proxy] Built URL: ${fullUrl} from path: ${path}`);
-    return fullUrl;
+    return `${base}/${tail}`;
 }
 
 async function fetchWithRetries(url) {
-    let backoff = RETRY_DELAY;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
             const res = await fetch(url, {
                 headers: {
-                    "User-Agent": `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RobloxProxy/2.0`, // Better UA to evade blocks
-                    "Cache-Control": "no-cache",
-                    "Accept": "application/json"
+                    "User-Agent": "Mozilla/5.0 RobloxProxy/2.0", // Better for blocks
+                    "Cache-Control": "no-cache"
                 }
             });
 
-            console.log(`[proxy] Fetch attempt ${attempt}: Status ${res.status} for ${url}`);
-
             if (res.status === 429) {
-                console.log(`[proxy] 429 detected, backing off ${BACKOFF_ON_429}ms (attempt ${attempt})`);
+                console.log(`[proxy] 429, backoff... attempt ${attempt}`);
                 await sleep(BACKOFF_ON_429);
-                backoff *= 1.5; // Exponential backoff
-                continue;
-            }
-
-            if (!res.ok) {
-                console.log(`[proxy] Non-OK status: ${res.status}`);
-                if (attempt < MAX_RETRIES) await sleep(backoff);
                 continue;
             }
 
             const text = await res.text();
-            return { status: res.status, body: text };
+
+            return {
+                status: res.status,
+                body: text
+            };
 
         } catch (err) {
-            console.log(`[proxy] Fetch error attempt ${attempt}:`, err.message);
-            if (attempt < MAX_RETRIES) await sleep(backoff);
-            backoff *= 1.5;
+            console.log(`[proxy] fetch error attempt ${attempt}:`, err);
+            await sleep(RETRY_DELAY);
         }
     }
+
     return null;
 }
 
@@ -91,21 +77,18 @@ exports.handler = async function(event, context) {
     const url = buildRobloxURL(path);
 
     if (!url) {
-        console.log("[proxy] Invalid path:", path);
         return {
             statusCode: 400,
-            body: JSON.stringify({ error: "Invalid Roblox API path" }),
-            headers: { "Content-Type": "application/json" }
+            body: "Invalid Roblox API base."
         };
     }
 
-    console.log(`[proxy] Incoming request: ${path} → ${url}`);
+    console.log("[proxy] Request →", url);
 
-    // ----- CACHE CHECK -----
-    const cacheKey = url; // Use full built URL as key
-    const cached = cache[cacheKey];
+    // Cache check
+    const cached = cache[url];
     if (cached && Date.now() - cached.time < CACHE_TTL) {
-        console.log("[proxy] Cache HIT for:", url);
+        console.log("[proxy] Cache hit:", url);
         return {
             statusCode: cached.status,
             body: cached.data,
@@ -113,25 +96,23 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // ----- FETCH WITH RETRIES -----
+    // Fetch
     const result = await fetchWithRetries(url);
     if (!result) {
-        console.error("[proxy] All retries failed for:", url);
         return {
-            statusCode: 503,
-            body: JSON.stringify({ error: "Roblox API unavailable after retries" }),
-            headers: { "Content-Type": "application/json" }
+            statusCode: 500,
+            body: "Roblox API request failed after retries."
         };
     }
 
-    // Save to cache
-    cache[cacheKey] = {
+    // Cache it
+    cache[url] = {
         time: Date.now(),
         data: result.body,
         status: result.status
     };
 
-    console.log(`[proxy] SUCCESS: ${result.status} for ${url} (cached)`);
+    console.log("[proxy] Response:", result.status);
 
     return {
         statusCode: result.status,

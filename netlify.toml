@@ -5,7 +5,7 @@
 # USERS API
 ############################################
 [[redirects]]
-  from = "/users/v1/*"
+  from = "/users/*"
   to = "/.netlify/functions/proxy"
   status = 200
 
@@ -13,7 +13,7 @@
 # GAMES API
 ############################################
 [[redirects]]
-  from = "/games/v1/*"
+  from = "/games/*"
   to = "/.netlify/functions/proxy"
   status = 200
 
@@ -21,7 +21,7 @@
 # CATALOG API
 ############################################
 [[redirects]]
-  from = "/catalog/v1/*"
+  from = "/catalog/*"
   to = "/.netlify/functions/proxy"
   status = 200
 
@@ -29,7 +29,7 @@
 # THUMBNAILS API
 ############################################
 [[redirects]]
-  from = "/thumbnails/v1/*"
+  from = "/thumbnails/*"
   to = "/.netlify/functions/proxy"
   status = 200
 
@@ -37,14 +37,19 @@
 # ECONOMY API
 ############################################
 [[redirects]]
-  from = "/economy/v1/*"
+  from = "/economy/*"
   to = "/.netlify/functions/proxy"
   status = 200
 
 ############################################
-# AVATAR API (Saved outfits, outfit details)
+# AVATAR API  🔥 FIXED 🔥
+# Must match ALL avatar URLs:
+# /avatar/v1/users/<id>/outfits
+# /avatar/v1/outfits/<id>/details
+# /avatar/v1/outfits/<id>/assets
+# /avatar/... ANYTHING
 ############################################
 [[redirects]]
-  from = "/avatar/v1/*"
+  from = "/avatar/*"
   to = "/.netlify/functions/proxy"
   status = 200

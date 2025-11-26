@@ -1,39 +1,58 @@
-const allowedDomains = [
-  "https://users.roblox.com",
-  "https://thumbnails.roblox.com",
-  "https://games.roblox.com",
-  "https://catalog.roblox.com",
-  "https://economy.roblox.com"
-];
+const allowedBase = {
+  "users": "https://users.roblox.com",
+  "games": "https://games.roblox.com",
+  "catalog": "https://catalog.roblox.com",
+  "thumbnails": "https://thumbnails.roblox.com",
+  "economy": "https://economy.roblox.com"
+};
 
 export async function handler(event, context) {
-  const url = event.queryStringParameters.url;
-  if (!url) {
-    return { statusCode: 400, body: "Missing ?url=" };
+  let targetUrl = null;
+
+  // 1. If ?url= exists → use it (old style)
+  if (event.queryStringParameters.url) {
+    targetUrl = event.queryStringParameters.url;
   }
 
-  if (!allowedDomains.some(domain => url.startsWith(domain))) {
-    return { statusCode: 403, body: "Domain not allowed" };
+  // 2. If redirect used :splat → build URL manually
+  if (!targetUrl && event.path) {
+    const cleanPath = event.path.replace("/.netlify/functions/proxy", "");
+    const parts = cleanPath.split("/").filter(Boolean);
+
+    // Example: /users/v1/users/1
+    // parts[0] -> "users"
+    // parts.slice(1).join('/') -> "v1/users/1"
+    const root = parts[0];
+
+    if (allowedBase[root]) {
+      targetUrl = `${allowedBase[root]}/${parts.slice(1).join("/")}`;
+    }
+  }
+
+  // 3. If still nothing → error
+  if (!targetUrl || !targetUrl.startsWith("http")) {
+    return {
+      statusCode: 400,
+      body: "Error: Missing or invalid Roblox API URL."
+    };
   }
 
   try {
-    const response = await fetch(url);
-    const text = await response.text();
+    const response = await fetch(targetUrl);
+    const body = await response.text();
 
     return {
-      statusCode: 200,
+      statusCode: response.status,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Content-Type": response.headers.get("content-type") || "text/plain",
-        "Cache-Control": "public, max-age=60"
+        "Content-Type": response.headers.get("content-type") || "text/plain"
       },
-      body: text
+      body: body
     };
-
-  } catch (error) {
+  } catch (e) {
     return {
       statusCode: 500,
-      body: "Error: " + error.toString()
+      body: "Proxy Error: " + e.toString()
     };
   }
 }

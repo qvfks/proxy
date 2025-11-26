@@ -40,3 +40,11 @@
   from = "/economy/v1/*"
   to = "/.netlify/functions/proxy"
   status = 200
+
+############################################
+# AVATAR API (Saved outfits, outfit details)
+############################################
+[[redirects]]
+  from = "/avatar/v1/*"
+  to = "/.netlify/functions/proxy"
+  status = 200
